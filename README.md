@@ -105,45 +105,13 @@ The prompt went through three iterations. All versions are available in `prompts
 5. **Dangerous Goods Negations**: Handles "non-DG", "non-hazardous", "not dangerous" patterns
 6. **TBD/N/A Values**: Maps to null for weight/CBM fields
 
-## System Design
+## System Design (High-level)
 
-### Scale: 10,000 emails/day, 99% processed within 5 minutes, $500/month budget
-
-**Architecture:**
-- **Message Queue**: RabbitMQ or AWS SQS to buffer emails and handle spikes
-- **Worker Pool**: 10-20 worker processes (auto-scaling based on queue depth)
-- **API Optimization**: Batch processing, use cheaper models for simple cases, cache port code lookups
-- **Cost Management**: ~$105/month for Groq API, remaining budget for infrastructure
-- **Latency**: With 20 workers, 99% complete within 5 minutes of arrival
-
-**Trade-offs**: Prioritize cost-efficiency over perfect accuracy by using smaller models for simple cases.
-
-### Monitoring: Accuracy drops from 90% to 70% over a week
-
-**Detection:**
-- Real-time monitoring with time-series DB (Prometheus/InfluxDB)
-- Alerts on accuracy drop >5% in 24h, field-level accuracy <80%, spike in null values
-
-**Investigation:**
-- Root cause analysis: Check specific field degradation, analyze failed emails for patterns, compare distribution shifts
-- Data analysis: Sample 50-100 recent failures, check for new port codes, verify business rules
-- Remediation: Update prompt/examples, update reference files, test different model versions
-
-**Prevention:**
-- Weekly accuracy reports with trend analysis
-- A/B testing for prompt changes
-- Human-in-the-loop review of low-confidence extractions
-
-### Multilingual: 30% emails in Mandarin, 20% in Hindi
-
-**Changes Required:**
-1. **LLM Selection**: Use multilingual models (llama-3.1-70b supports 100+ languages)
-2. **Prompt Adaptation**: Translate prompt, include examples in all three languages
-3. **Port Code Reference**: Add multilingual aliases to reference file
-4. **Evaluation Strategy**: Separate accuracy metrics per language, field-level analysis
-5. **Challenges**: Port name transliterations, incoterm abbreviations, number formats
-
-**Trade-off**: Multilingual support may slightly reduce English accuracy due to prompt complexity.
+- **Queue-based architecture** (SQS/RabbitMQ) to handle email spikes
+- **Auto-scaling worker pool** for parallel extraction
+- **Cost-aware LLM routing** (smaller models for simple emails)
+- **Post-processing layer** to enforce business rules and normalization
+- **Monitoring & alerts** for accuracy degradation
 
 ## Rate Limit Handling
 
